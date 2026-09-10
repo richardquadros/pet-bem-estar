@@ -44,5 +44,19 @@ public class AgendamentoDAOJPA implements AgendamentoDAO {
         em.getTransaction().commit();
     }
 
-    
+    @Override
+    public List<Agendamento> listarPorAnimal(Long idAnimal) {
+        String jpql = "SELECT a FROM Agendamento a WHERE a.pet.id = :idAnimal";
+        return em.createQuery(jpql, Agendamento.class)
+                 .setParameter("idAnimal", idAnimal)
+                 .getResultList();
+    }
+
+    @Override
+    public List<Agendamento> listarPorSituacao(SituacaoAgendamento situacao) {
+        String jpql = "SELECT a FROM Agendamento a WHERE a.situacaoAgendamento = :situacao";
+        return em.createQuery(jpql, Agendamento.class)
+                 .setParameter("situacao", situacao)
+                 .getResultList();
+    }
 }

@@ -1,7 +1,14 @@
 package br.edu.ifrs.petbemestar;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
+import dao.AgendamentoDAO;
+import dao.AgendamentoDAOJPA;
+import dao.ClienteDAO;
+import dao.ClienteDAOJPA;
+import dao.PetDAO;
+import dao.PetDAOJPA;
 import dominio.Agendamento;
 import dominio.Cliente;
 import dominio.Pet;
@@ -13,34 +20,43 @@ import jakarta.persistence.Persistence;
 
 public class Principal {
 
-	public static void main(String[] args) {
-		Cliente clienteCarlos = new Cliente("Carlos Eduardo Lima", "12345678901", "Av. Ipiranga, 1200", "51988887777", "carlos.lima@email.com");
-		
-		Pet petThor = new Pet("Thor", clienteCarlos, "Gato", "Persa", 4);
-		Pet petLuna = new Pet("Luna", clienteCarlos, "Cão", "Golden Retriever", 2);
-		
-		clienteCarlos.adicionarPet(petThor);
-		clienteCarlos.adicionarPet(petLuna);
+    public static void main(String[] args) {
+        EntityManagerFactory emf = Persistence.createEntityManagerFactory("pet-bem-estar-pu");
+        EntityManager em = emf.createEntityManager();
 
-		Agendamento agendamentoConsulta = new Agendamento(petThor, SituacaoAgendamento.marcado, TipoServico.consulta, LocalDateTime.of(2026, 9, 15, 10, 30));
-		Agendamento agendamentoBanho = new Agendamento(petLuna, SituacaoAgendamento.marcado, TipoServico.banho, LocalDateTime.of(2026, 9, 16, 14, 0));
+        ClienteDAO clienteDAO = new ClienteDAOJPA(em);
+        PetDAO petDAO = new PetDAOJPA(em);
+        AgendamentoDAO agendamentoDAO = new AgendamentoDAOJPA(em);
 
-		EntityManagerFactory emf = Persistence.createEntityManagerFactory("pet-bem-estar-pu");
-		EntityManager em = emf.createEntityManager();
+        Cliente cliente = new Cliente("Carlos Eduardo Lima", "12345678901", "Av. Ipiranga, 1200", "51988887777", "carlos@email.com");
+        clienteDAO.salvar(cliente);
 
-		em.getTransaction().begin();
-		
-		em.persist(clienteCarlos);
-		em.persist(petThor);
-		em.persist(petLuna);
-		em.persist(agendamentoConsulta);
-		em.persist(agendamentoBanho);
-		
-		em.getTransaction().commit();
+        Pet petThor = new Pet("Thor", cliente, "Gato", "Persa", 4);
+        petDAO.salvar(petThor);
 
-		em.close();
-		emf.close();
+        Agendamento ag1 = new Agendamento(petThor, SituacaoAgendamento.marcado, TipoServico.consulta, LocalDateTime.now());
+        Agendamento ag2 = new Agendamento(petThor, SituacaoAgendamento.marcado, TipoServico.banho, LocalDateTime.now().plusDays(1));
+        
+        agendamentoDAO.salvar(ag1);
+        agendamentoDAO.salvar(ag2);
 
-		System.out.println("Dados salvos no banco de dados com sucesso!");
-	}
+        cliente.setNome("Carlos Eduardo Lima Alterado");
+        clienteDAO.atualizar(cliente);
+        System.out.println("Tutor atualizado: " + clienteDAO.buscarPorId(cliente.getId()).getNome());
+
+        agendamentoDAO.remover(ag2);
+        System.out.println("Atendimento removido com sucesso!");
+
+        Agendamento ag3 = new Agendamento(petThor, SituacaoAgendamento.marcado, TipoServico.tosa, LocalDateTime.now().plusDays(2));
+        agendamentoDAO.salvar(ag3);
+
+        List<Agendamento> atendimentosDoThor = agendamentoDAO.listarPorAnimal(petThor.getId());
+        System.out.println("\n--- Atendimentos do Pet " + petThor.getNome() + " ---");
+        for (Agendamento a : atendimentosDoThor) {
+            System.out.println(a);
+        }
+
+        em.close();
+        emf.close();
+    }
 }
